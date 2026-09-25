@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>メッセージボックスメーカー | ココフォリア × OBS</title>
+<meta name="description" content="ココフォリアのルーム画面の下に出る、立ち絵つきのメッセージボックスを、OBS に好きなデザインで映すためのカスタムCSSを作るツールです。ルームの画面は消えて、メッセージボックスだけが映ります。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="メッセージボックスメーカー">
+<meta property="og:title" content="メッセージボックスメーカー">
+<meta property="og:description" content="ココフォリアの立ち絵つきメッセージボックスを、OBS に好きなデザインで映すカスタムCSSを作れます。ノベルゲーム風・古い紙・SF など。無料・登録不要。">
+<meta property="og:url" content="https://shiki365.github.io/message-box-maker/">
+<meta property="og:image" content="https://shiki365.github.io/message-box-maker/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="メッセージボックスメーカー － ココフォリアの立ち絵つきメッセージボックスを、OBS に好きなデザインで">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #15161a; --panel: #1e1f26; --line: #303240; --line-soft: #282a36;
+    --fg: #e7e7ea; --muted: #9a9aa5; --accent: #6b70ff;
+    --button: #575cf5; /* darker than --accent so white text passes 4.5:1 */
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font-family: "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 13px; }
+  header { padding: 18px 24px 14px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0 0 4px; font-size: 17px; }
+  header p { margin: 0; color: var(--muted); font-size: 12px; }
+  main { display: grid; gap: 20px; padding: 20px 24px 40px;
+         grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0 16px 16px; }
+  .tabbar { display: flex; gap: 2px; margin: 0 -16px; padding: 8px 8px 0; border-bottom: 1px solid var(--line);
+            position: sticky; top: 0; background: var(--panel); z-index: 2; border-radius: 10px 10px 0 0; }
+  .tabbar button { flex: 1; border: 0; border-bottom: 2px solid transparent; border-radius: 0; white-space: nowrap;
+                   background: transparent; color: var(--muted); padding: 8px 2px 9px; }
+  .tabbar button:hover { background: transparent; color: var(--fg); }
+  .tabbar button[aria-selected=true] { color: var(--fg); border-bottom-color: var(--accent); font-weight: 700; }
+
+  fieldset { border: 0; border-top: 1px solid var(--line-soft); margin: 14px 0 0; padding: 12px 0 0; min-width: 0; }
+  section > fieldset:first-child { border-top: 0; }
+  legend { padding: 0; color: var(--muted); font-size: 11px; letter-spacing: .08em; }
+  .row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: center; margin-top: 10px; }
+  .row > label { color: var(--muted); }
+  .row.wide { grid-template-columns: 1fr; }
+  .row.sub > label { padding-left: 12px; }
+  .with-value { display: grid; grid-template-columns: minmax(0, 1fr) 52px; gap: 8px; align-items: center; }
+  .with-value output { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+  .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; }
+  .trio span { display: grid; gap: 2px; color: var(--muted); font-size: 11px; }
+  .color-alpha { display: grid; grid-template-columns: 60px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+  .color-alpha output { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .checks { display: grid; gap: 6px; }
+
+  select, input[type=text], input[type=number], textarea {
+    width: 100%; background: #14151b; color: var(--fg); font: inherit;
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+  input[type=color] { width: 100%; height: 30px; padding: 2px; background: #14151b;
+                      border: 1px solid var(--line); border-radius: 6px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; vertical-align: -3px; }
+  select:focus-visible, input:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px; }
+  .desc { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+  .desc b { color: var(--fg); }
+  .check { color: var(--fg); cursor: pointer; }
+  .tag31 { display: inline-block; margin-left: 4px; padding: 0 5px; border: 1px solid #5a5e80; border-radius: 4px; color: #b9bcff; font-size: 10px; vertical-align: 1px; }
+
+  button { background: #2f3140; color: var(--fg); border: 1px solid #464a5e;
+           border-radius: 6px; padding: 7px 14px; font: inherit; cursor: pointer; }
+  button:hover { background: #3a3d4f; }
+  button.primary { background: var(--button); border-color: var(--button); color: #fff; font-weight: 700; }
+  button.primary:hover { background: #4a4fe0; }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  button.danger:hover { background: #5a2f36; border-color: #8a4a55; }
+  button:disabled { opacity: .45; cursor: default; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .stage-wrap { position: sticky; top: 20px; display: grid; gap: 10px; min-width: 0; }
+  .stage { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid var(--line);
+           min-height: 220px; display: grid; place-items: center; padding: 28px 16px; }
+  .stage.bg-checker { background-color: #cfcfd6;
+    background-image: linear-gradient(45deg, #9a9aa5 25%, transparent 25% 75%, #9a9aa5 75%),
+                      linear-gradient(45deg, #9a9aa5 25%, transparent 25% 75%, #9a9aa5 75%);
+    background-size: 24px 24px; background-position: 0 0, 12px 12px; }
+  .stage.bg-dark { background-color: #26272e; }
+  .stage.bg-light { background-color: #f2f2f4; }
+  .stage.bg-scene { background: radial-gradient(ellipse at 30% 20%, #6d7fa8, transparent 60%),
+                    radial-gradient(ellipse at 80% 90%, #a8735a, transparent 55%), #2d3348; }
+  .frame-box { position: relative; outline: 1px dashed rgba(255, 64, 160, .85); outline-offset: 0; }
+  /* color-scheme must match the page inside, or Chromium paints the iframe opaque white (this page is dark). */
+  .frame-box iframe { position: absolute; left: 0; top: 0; border: 0; background: transparent; transform-origin: 0 0; color-scheme: normal; }
+  .stage-info { position: absolute; left: 10px; bottom: 6px; font-size: 11px; color: #fff; text-shadow: 0 1px 2px #000; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .bar .spacer { flex: 1; }
+  .bar select { width: auto; }
+  .bar input[type=text] { width: 140px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 5px 11px; background: transparent; }
+  .seg button[aria-pressed=true] { background: #3a3d4f; font-weight: 700; }
+  .status { color: var(--muted); font-size: 12px; min-height: 1.4em; margin: 0; }
+  .status.error { color: #ff8f8f; }
+  .size-note { color: var(--fg); font-size: 13px; }
+  .size-note b { font-size: 15px; }
+
+  .tester, .source-url { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
+  .tester h2, .source-url h2 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 400; }
+  .source-url .missing { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+  .source-url .warn { color: #ffb86b; font-size: 12px; line-height: 1.7; }
+  .desc.warn-text { color: #ffb86b; }
+  .custom { display: grid; grid-template-columns: 130px 110px minmax(0, 1fr); gap: 6px; align-items: center; }
+  .custom input[type=text] { width: 100%; }
+  @media (max-width: 560px) { .custom { grid-template-columns: 1fr 1fr; } .custom .grow { grid-column: 1 / -1; } }
+
+  details.css-out summary { cursor: pointer; color: var(--muted); }
+  details.css-out textarea { margin-top: 8px; height: 280px; font-family: Consolas, "BIZ UDGothic", monospace; font-size: 12px; white-space: pre; }
+
+  .note { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 0; }
+  .note code { background: #14151b; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .note h2 { font-size: 13px; color: var(--fg); margin: 18px 0 6px; }
+  .note ol, .note ul { margin: 6px 0; padding-left: 1.4em; }
+  .note b { color: var(--fg); }
+  .note a { color: #a8abff; }
+  footer { border-top: 1px solid var(--line); padding: 16px 24px 40px; color: var(--muted); font-size: 12px; line-height: 1.9; }
+  footer a { color: #a8abff; }
+  .home-link { display: inline-block; margin-bottom: 4px; color: var(--muted); font-size: 12px; text-decoration: none; }
+  .home-link:hover { color: var(--fg); text-decoration: underline; }
+  .home-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home-link" href="https://shiki365.github.io/">‹ shiki365 のツール置き場</a>
+  <h1>メッセージボックスメーカー</h1>
+  <p>ココフォリアで発言するとルーム画面の下に出る、立ち絵つきのメッセージボックスを、OBS に好きなデザインで映すための「カスタムCSS」を作ります。ルームの盤面や駒は消えて、メッセージボックスだけが映ります。すべてブラウザの中だけで処理され、入力した内容がどこかに送られることはありません。マシュマロでいただいた要望から生まれたツールです。</p>
+</header>
+
+<main>
+  <div class="panel">
+    <nav class="tabbar" role="tablist">
+      <button type="button" role="tab" data-tab="box" aria-selected="true">箱・配置</button>
+      <button type="button" role="tab" data-tab="name" aria-selected="false">名前・結果</button>
+      <button type="button" role="tab" data-tab="text" aria-selected="false">本文</button>
+      <button type="button" role="tab" data-tab="portrait" aria-selected="false">立ち絵・ダイス</button>
+      <button type="button" role="tab" data-tab="obs" aria-selected="false">OBS・保存</button>
+    </nav>
+
+    <!-- ============================================================ box -->
+    <section data-tab-panel="box">
+      <fieldset>
+        <legend>デザインのひな形</legend>
+        <div class="row wide"><span class="pair" style="grid-template-columns: 1fr auto;">
+          <select id="design" aria-label="デザインのひな形"></select>
+          <button type="button" id="applyDesign">適用</button>
+        </span></div>
+        <p class="desc" id="designDesc"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>ブラウザソースの大きさ</legend>
+        <div class="row"><label>幅 × 高さ</label>
+          <span class="pair"><input type="number" data-bind="source.w" min="320" max="3840" step="10" aria-label="幅"><input type="number" data-bind="source.h" min="160" max="2160" step="10" aria-label="高さ"></span></div>
+        <div class="row"><label></label><span class="btns">
+          <button type="button" class="small" data-size="1920x1080">1920×1080</button>
+          <button type="button" class="small" data-size="1280x720">1280×720</button>
+          <button type="button" class="small" data-size="1280x540">下半分 1280×540</button>
+        </span></div>
+        <p class="desc">OBS のブラウザソースに入れる幅と高さです。立ち絵は箱の上にはみ出すので、高さは立ち絵のぶんも取ってください。<b>幅が 900 より狭いと、ココフォリアが立ち絵とダイスを小さくする</b>ので、このツールでは大きさを決め直しています。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>位置</legend>
+        <div class="row"><label>箱の幅</label>
+          <span class="with-value"><input type="range" data-bind="layout.width" min="320" max="1800" step="10"><output data-out="layout.width" data-fmt="px"></output></span></div>
+        <div class="row"><label>寄せる位置</label><select data-bind="layout.align" data-options="ALIGNS"></select></div>
+        <div class="row"><label>下の余白</label>
+          <span class="with-value"><input type="range" data-bind="layout.bottom" min="0" max="300" step="1"><output data-out="layout.bottom" data-fmt="px"></output></span></div>
+        <div class="row"><label>左右の余白</label>
+          <span class="with-value"><input type="range" data-bind="layout.side" min="0" max="400" step="1"><output data-out="layout.side" data-fmt="px"></output></span></div>
+        <div class="row"><label>出かた</label><select data-bind="layout.enter" data-options="ENTERS"></select></div>
+        <p class="desc">箱の幅は最大の幅です。ソースが狭いときは、左右の余白を残して縮みます。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>箱</legend>
+        <div class="row"><label>背景</label>
+          <span class="color-alpha"><input type="color" data-bind="box.bg"><input type="range" data-bind="box.bgAlpha" min="0" max="1" step="0.01"><output data-out="box.bgAlpha" data-fmt="pct"></output></span></div>
+        <div class="row"><label>質感</label><select data-bind="box.texture" data-options="TEXTURES"></select></div>
+        <div class="row"><label>枠線</label>
+          <span class="with-value"><input type="range" data-bind="box.borderW" min="0" max="8" step="1"><output data-out="box.borderW" data-fmt="px"></output></span></div>
+        <div class="row" data-show="box.borderW!=0"><label>枠線の色</label>
+          <span class="color-alpha"><input type="color" data-bind="box.borderColor"><input type="range" data-bind="box.borderAlpha" min="0" max="1" step="0.01"><output data-out="box.borderAlpha" data-fmt="pct"></output></span></div>
+        <div class="row"><label>角丸</label>
+          <span class="with-value"><input type="range" data-bind="box.radius" min="0" max="40" step="1"><output data-out="box.radius" data-fmt="px"></output></span></div>
+        <div class="row"><label>影</label>
+          <span class="with-value"><input type="range" data-bind="box.shadow" min="0" max="1" step="0.05"><output data-out="box.shadow" data-fmt="pct"></output></span></div>
+        <div class="row"><label></label><label class="check"><input type="checkbox" data-bind="box.corners"> 四隅にかっこを付ける</label></div>
+        <div class="row" data-show="box.corners=true"><label>かっこの色</label>
+          <span class="color-alpha"><input type="color" data-bind="box.cornerColor"><input type="range" data-bind="box.cornerAlpha" min="0" max="1" step="0.01"><output data-out="box.cornerAlpha" data-fmt="pct"></output></span></div>
+        <div class="row"><label>内側の余白</label>
+          <span class="pair"><input type="range" data-bind="box.padX" min="0" max="60" step="1" aria-label="左右の余白"><input type="range" data-bind="box.padY" min="0" max="40" step="1" aria-label="上下の余白"></span></div>
+        <div class="row"><label>本文の高さ</label>
+          <span class="with-value"><input type="range" data-bind="box.lines" min="1" max="8" step="1"><output data-out="box.lines" data-fmt="lines"></output></span></div>
+        <div class="row"><label>ボタン</label><select data-bind="box.buttons" data-options="BUTTONS"></select></div>
+        <p class="desc">本文の高さは、本文の文字の大きさで何行ぶんかです。それより長い発言は、ココフォリアが 1 文字打つたびに下へ送るので、最後の行まで読めます。<br>
+          ボタンはスキップ（▶）と閉じる（×）です。「マウスを乗せたときだけ」にすると、配信には映らず、OBS の「対話」からだけ押せます。</p>
+      </fieldset>
+    </section>
+
+    <!-- ============================================================ name -->
+    <section data-tab-panel="name" hidden>
+      <fieldset>
+        <legend>名前</legend>
+        <div class="row"><label></label><label class="check"><input type="checkbox" data-bind="name.show"> 発言したキャラの名前を出す</label></div>
+        <div data-show="name.show=true">
+          <div class="row"><label>置き方</label><select data-bind="name.style" data-options="NAME_STYLES"></select></div>
+          <div class="row"><label>フォント</label><select data-bind="name.font" data-options="FONTS"></select></div>
+          <div class="row sub" data-show="name.font=pc"><label>フォント名</label><span class="pc-font">
+            <input type="text" data-bind="name.fontName" placeholder="例）BIZ UDPGothic" aria-label="名前のフォント名" autocomplete="off" spellcheck="false"><button type="button" class="small" data-pc-fonts>一覧から選ぶ</button></span></div>
+          <div class="row"><label>太さ</label><select data-bind="name.weight" data-options="WEIGHTS" data-number></select></div>
+          <div class="row"><label>大きさ</label>
+            <span class="with-value"><input type="range" data-bind="name.size" min="8" max="48" step="1"><output data-out="name.size" data-fmt="px"></output></span></div>
+          <div class="row"><label>文字の色</label><input type="color" data-bind="name.color"></div>
+          <div class="row" data-show="name.style=inline"><label>本文との間</label>
+            <span class="with-value"><input type="range" data-bind="name.gap" min="0" max="30" step="1"><output data-out="name.gap" data-fmt="px"></output></span></div>
+          <div data-show="name.style=plate">
+            <div class="row"><label>札の色</label>
+              <span class="color-alpha"><input type="color" data-bind="name.plateBg"><input type="range" data-bind="name.plateAlpha" min="0" max="1" step="0.01"><output data-out="name.plateAlpha" data-fmt="pct"></output></span></div>
+            <div class="row"><label>札の角丸</label>
+              <span class="with-value"><input type="range" data-bind="name.plateRadius" min="0" max="30" step="1"><output data-out="name.plateRadius" data-fmt="px"></output></span></div>
+            <div class="row"><label>札の枠線</label>
+              <span class="with-value"><input type="range" data-bind="name.plateBorderW" min="0" max="4" step="1"><output data-out="name.plateBorderW" data-fmt="px"></output></span></div>
+            <div class="row" data-show="name.plateBorderW!=0"><label>枠線の色</label><input type="color" data-bind="name.plateBorderColor"></div>
+            <div class="row"><label>左からの位置</label>
+              <span class="with-value"><input type="range" data-bind="name.plateX" min="0" max="300" step="1"><output data-out="name.plateX" data-fmt="px"></output></span></div>
+          </div>
+        </div>
+        <p class="desc">メッセージボックスの名前には、キャラの色の情報がありません（チャット欄と違い、ココフォリアが色を付けていません）。そのため名前の色は 1 色です。「箱の上に札を付ける」では、ダイスの結果も札の横に並びます。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>ダイスの結果</legend>
+        <div class="row"><label></label><label class="check"><input type="checkbox" data-bind="result.show"> 結果を出す（「🎲 ＞ 成功」など）</label></div>
+        <div data-show="result.show=true">
+          <div class="row"><label>置く場所</label><select data-bind="result.place" data-options="RESULT_PLACES"></select></div>
+          <div class="row"><label>見た目</label><select data-bind="result.style" data-options="RESULT_STYLES"></select></div>
+          <div class="row"><label>フォント</label><select data-bind="result.font" data-options="FONTS"></select></div>
+          <div class="row sub" data-show="result.font=pc"><label>フォント名</label><span class="pc-font">
+            <input type="text" data-bind="result.fontName" placeholder="例）BIZ UDPGothic" aria-label="ダイスの結果のフォント名" autocomplete="off" spellcheck="false"><button type="button" class="small" data-pc-fonts>一覧から選ぶ</button></span></div>
+          <div class="row"><label>太さ</label><select data-bind="result.weight" data-options="WEIGHTS" data-number></select></div>
+          <div class="row"><label>大きさ</label>
+            <span class="with-value"><input type="range" data-bind="result.size" min="8" max="48" step="1"><output data-out="result.size" data-fmt="px"></output></span></div>
+          <div class="row"><label>色</label>
+            <span class="trio">
+              <span>成功<input type="color" data-bind="result.success" aria-label="成功の色"></span>
+              <span>失敗<input type="color" data-bind="result.failure" aria-label="失敗の色"></span>
+              <span>その他<input type="color" data-bind="result.neutral" aria-label="成否のない結果の色"></span>
+            </span></div>
+        </div>
+        <p class="desc">色の分け方はココフォリアと同じです。<b>成功</b>は「成功」「スペシャル」を含む結果、<b>失敗</b>は「失敗」を含む結果（ファンブルも）、成否のないロール（<code>2D6</code> など）は<b>その他</b>です。出るのはダイスの結果の最後の「＞ …」の部分だけです。</p>
+      </fieldset>
+    </section>
+
+    <!-- ============================================================ text -->
+    <section data-tab-panel="text" hidden>
+      <fieldset>
+        <legend>本文</legend>
+        <div class="row"><label>フォント</label><select data-bind="text.font" data-options="FONTS"></select></div>
+        <div class="row sub" data-show="text.font=pc"><label>フォント名</label><span class="pc-font">
+          <input type="text" data-bind="text.fontName" placeholder="例）BIZ UDPGothic" aria-label="本文のフォント名" autocomplete="off" spellcheck="false"><button type="button" class="small" data-pc-fonts>一覧から選ぶ</button></span></div>
+        <div class="row"><label>太さ</label><select data-bind="text.weight" data-options="WEIGHTS" data-number></select></div>
+        <div class="row"><label>大きさ</label>
+          <span class="with-value"><input type="range" data-bind="text.size" min="10" max="48" step="1"><output data-out="text.size" data-fmt="px"></output></span></div>
+        <div class="row"><label>色</label><input type="color" data-bind="text.color"></div>
+        <div class="row"><label>行の高さ</label>
+          <span class="with-value"><input type="range" data-bind="text.lineHeight" min="1" max="2.4" step="0.05"><output data-out="text.lineHeight"></output></span></div>
+        <div class="row"><label>字間</label>
+          <span class="with-value"><input type="range" data-bind="text.spacing" min="0" max="0.3" step="0.01"><output data-out="text.spacing" data-fmt="em"></output></span></div>
+        <div class="row"><label>ふちどり</label><select data-bind="text.outline" data-options="OUTLINES"></select></div>
+        <div class="row" data-show="text.outline!=none"><label>ふちの色</label>
+          <span class="color-alpha"><input type="color" data-bind="text.outlineColor"><input type="range" data-bind="text.outlineAlpha" min="0" max="1" step="0.01"><output data-out="text.outlineAlpha" data-fmt="pct"></output></span></div>
+        <div class="row" data-show="text.outline=stroke"><label>ふちの太さ</label>
+          <span class="with-value"><input type="range" data-bind="text.outlineW" min="1" max="5" step="0.5"><output data-out="text.outlineW" data-fmt="px"></output></span></div>
+        <p class="desc">ふちどりは、箱の中に置いた名前とダイスの結果にもかかります。</p>
+        <p class="desc" data-show="name.font=pc|text.font=pc|result.font=pc">「名前で指定（PCのフォント）」では、この PC に入れたフォントが使えます。<b>OBS を動かす PC にも同じフォントが入っている必要があります。</b></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>変えられないところ</legend>
+        <p class="desc">文字を打つ速さ（1 文字 0.08 秒、句読点と改行のあとは 0.8 秒）、次の発言までの間（打ち終わってから 1.2 秒）、どの発言を出すか（メイン・情報タブの、ページを開いたあとの発言）は、ココフォリアのプログラムが決めているので、CSS では変えられません。</p>
+      </fieldset>
+    </section>
+
+    <!-- ============================================================ portrait -->
+    <section data-tab-panel="portrait" hidden>
+      <fieldset>
+        <legend>立ち絵</legend>
+        <div class="row"><label></label><label class="check"><input type="checkbox" data-bind="portrait.show"> 立ち絵を出す</label></div>
+        <div data-show="portrait.show=true">
+          <div class="row"><label>幅</label>
+            <span class="with-value"><input type="range" data-bind="portrait.width" min="60" max="800" step="5"><output data-out="portrait.width" data-fmt="px"></output></span></div>
+          <div class="row"><label>高さの上限</label>
+            <span class="with-value"><input type="range" data-bind="portrait.maxH" min="100" max="1400" step="10"><output data-out="portrait.maxH" data-fmt="px"></output></span></div>
+          <div class="row"><label>置く側</label><select data-bind="portrait.side" data-options="SIDES"></select></div>
+          <div class="row"><label>端からの位置</label>
+            <span class="with-value"><input type="range" data-bind="portrait.x" min="-200" max="600" step="1"><output data-out="portrait.x" data-fmt="px"></output></span></div>
+          <div class="row"><label>箱に重ねる</label>
+            <span class="with-value"><input type="range" data-bind="portrait.y" min="-100" max="300" step="1"><output data-out="portrait.y" data-fmt="px"></output></span></div>
+          <div class="row"><label>重なり</label><select data-bind="portrait.layer" data-options="LAYERS"></select></div>
+          <div class="row"><label></label><label class="check"><input type="checkbox" data-bind="portrait.flip"> 左右を反転する</label></div>
+        </div>
+        <p class="desc">立ち絵は箱の上に立ちます。「箱に重ねる」を増やすと、足元が箱の後ろ（または前）に沈みます。縦に長い立ち絵は「高さの上限」で縮めます。<br>
+          キャラの設定で「発言時キャラクターを表示しない」にしているときや、立ち絵のないキャラ（KP など）の発言では出ません。差分は、ココフォリアで「…@笑顔」のように発言すると切り替わります。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>ダイスの画像</legend>
+        <div class="row"><label></label><label class="check"><input type="checkbox" data-bind="dice.show"> ダイスを振ったときの画像を出す</label></div>
+        <div class="row" data-show="dice.show=true"><label>大きさ</label>
+          <span class="with-value"><input type="range" data-bind="dice.size" min="24" max="150" step="1"><output data-out="dice.size" data-fmt="px"></output></span></div>
+        <p class="desc">箱の右上（立ち絵が右のときは左上）に、回りながら出ます。<br>
+          <b>ココフォリアのルーム設定で「旧ダイス演出を利用する」をオンにしたときだけ出ます。</b>オフ（最初の設定）では 3D のダイスが盤面で転がりますが、盤面ごと消えるので OBS には映りません。シークレットダイスでは出ません。</p>
+      </fieldset>
+    </section>
+
+    <!-- ============================================================ obs -->
+    <section data-tab-panel="obs" hidden>
+      <fieldset>
+        <legend>ルーム</legend>
+        <div class="row wide"><input type="text" data-bind="source.room" placeholder="https://ccfolia.com/rooms/…" aria-label="ルームのURL"></div>
+        <div class="row wide"><span class="pair" style="grid-template-columns: 1fr auto;">
+          <input type="text" id="roomUrl" readonly aria-label="ブラウザソースに入れるURL" placeholder="ルームの URL を入れると、ここに出ます">
+          <button type="button" id="copyUrl">URL をコピー</button>
+        </span></div>
+        <p class="desc">ココフォリアでルームを開いたときの URL を貼ります。書き出す CSS の先頭にも書き込まれます。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>プロジェクト</legend>
+        <div class="row wide"><span class="btns">
+          <button type="button" id="saveProject">プロジェクトを保存</button>
+          <button type="button" id="openProject">開く</button>
+          <button type="button" class="danger" id="resetAll">最初からやり直す</button>
+        </span></div>
+        <p class="desc">作業内容はこのブラウザに自動で保存されます。卓ごとにデザインを変えるときは「プロジェクトを保存」で分けておくと便利です。</p>
+      </fieldset>
+    </section>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="bar">
+      <label class="check"><input type="checkbox" data-bind="preview.raw" data-nohistory> CSS を当てる前（ルーム画面そのまま）を見る</label>
+      <span class="spacer"></span>
+      <button type="button" class="small" id="undo" title="元に戻す (Ctrl+Z)">↶ 戻す</button>
+      <button type="button" class="small" id="redo" title="やり直す (Ctrl+Y)">↷ 進む</button>
+    </div>
+    <div class="stage bg-scene" id="stage">
+      <div class="frame-box" id="frameBox"><iframe id="preview" title="プレビュー" tabindex="-1"></iframe></div>
+      <span class="stage-info" id="stageInfo"></span>
+    </div>
+    <div class="bar">
+      <span class="seg" id="bgSeg" aria-label="プレビューの背景">
+        <button type="button" data-bg="scene">色つき</button>
+        <button type="button" data-bg="checker">市松</button>
+        <button type="button" data-bg="dark">暗い</button>
+        <button type="button" data-bg="light">明るい</button>
+      </span>
+      <span class="spacer"></span>
+      <span class="size-note" id="sizeNote"></span>
+    </div>
+
+    <div class="tester">
+      <h2>発言して確かめる（プレビューだけ。書き出す CSS には影響しません）</h2>
+      <div class="btns">
+        <button type="button" class="small" data-send="chat">チャット</button>
+        <button type="button" class="small" data-send="success">ダイス：成功</button>
+        <button type="button" class="small" data-send="failure">ダイス：失敗</button>
+        <button type="button" class="small" data-send="neutral">ダイス：成否なし</button>
+        <button type="button" class="small" data-send="secret">シークレットダイス</button>
+        <button type="button" class="small" data-send="long" title="立ち絵のない KP の、長い地の文">長文（立ち絵なし）</button>
+        <span class="spacer" style="flex: 1"></span>
+        <button type="button" class="small" id="closeBox" title="ココフォリアの「閉じる」と同じ">閉じる</button>
+        <button type="button" class="small" id="resetMessages">最初の状態に戻す</button>
+      </div>
+      <div class="custom">
+        <select id="customWho" aria-label="発言するキャラ"></select>
+        <select id="customKind" aria-label="メッセージの種類">
+          <option value="chat">チャット</option>
+          <option value="dice">ダイス</option>
+        </select>
+        <span class="pair grow" style="grid-template-columns: 1fr auto;">
+          <input type="text" id="customText" placeholder="本文（ダイスならコマンド）　結果は | の後ろに" aria-label="送るメッセージ">
+          <button type="button" class="small" id="sendCustom">送る</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="source-url">
+      <h2>OBS のブラウザソースに入れる URL（ルームの URL そのまま）</h2>
+      <span class="pair" id="sourceUrlSet" style="grid-template-columns: 1fr auto;">
+        <input type="text" id="roomUrlMain" readonly aria-label="ブラウザソースに入れるURL">
+        <button type="button" class="small" id="copyUrlMain">URL をコピー</button>
+      </span>
+      <div class="missing" id="sourceUrlMissing">
+        <span class="warn">メッセージボックスはルームの画面にしかありません。末尾が /chat のチャット画面ではなく、ルームの URL を入れてください。</span>
+        <button type="button" class="small" id="gotoRoom">ルームの URL を入れる</button>
+      </div>
+    </div>
+
+    <div class="bar">
+      <input type="text" data-bind="fileBase" aria-label="ファイル名" placeholder="ファイル名">
+      <span class="spacer"></span>
+      <button type="button" id="downloadCss">CSS を保存</button>
+      <button type="button" class="primary" id="copyCss">CSS をコピー</button>
+    </div>
+    <p class="status" id="status">読み込み中...</p>
+
+    <details class="css-out">
+      <summary>書き出す CSS を見る</summary>
+      <textarea id="cssOut" readonly spellcheck="false" aria-label="書き出す CSS"></textarea>
+    </details>
+
+    <div class="note">
+      <h2>OBS での設定</h2>
+      <ol>
+        <li>ソースを追加 →「ブラウザ」。URL に<b>ルームの URL</b>を入れます：<br><code>https://ccfolia.com/rooms/{ルームID}</code><br>チャットウィンドウメーカーと違い、末尾に <code>/chat</code> は付けません。</li>
+        <li>幅と高さに、上に出ている <b>ブラウザソースの大きさ</b> を入れます。</li>
+        <li>「カスタム CSS」の中身を全部消して、コピーした CSS を貼り付けます。ルームの盤面や駒は消えて、何も映らなくなれば OK です。</li>
+        <li><b>「OBS で音声を制御」をオン</b>にして、音声ミキサーでこのソースをミュートします。オフのままだと、ルームの BGM やダイスの音が PC から二重に鳴ります。</li>
+        <li>ココフォリアへのログインが必要です。いったん URL を <code>https://ccfolia.com/</code> にして、ソースを右クリック →「対話」でログインしてから、URL を元に戻します（1 回やれば覚えています。ほかのブラウザソースとも共通です）。</li>
+      </ol>
+      <h2>映り方</h2>
+      <ul>
+        <li>出るのは、<b>ソースを読み込んだあとの</b>メイン・情報タブの発言です。OBS を起動した直後やソースを読み込み直した直後は、次の発言まで何も映りません。</li>
+        <li>発言が続くと 1 件ずつ順番に出ます。<b>最後の発言は消えずに残ります</b>。</li>
+        <li>消したいときは、OBS でソースを右クリック →「対話」を開き、ボックスにマウスを乗せて出てくる「閉じる」（×）を押します（「箱・配置」タブの「ボタン」が「マウスを乗せたときだけ」のとき）。<b>自分のココフォリアの画面で閉じても、OBS のほうは閉じません</b>（閉じたかどうかはブラウザごとに別です）。ソースのプロパティで「現在のページのキャッシュを更新」を押しても消えます。</li>
+        <li>ルームの設定でメッセージボックスを隠している（チャットの <code>hide mb</code> など）と、OBS にも出ません。</li>
+        <li>ほかの人あての秘話は出ません（ログインしているアカウントあての秘話は出ます）。</li>
+        <li>ダイスの画像を箱の上に出すには、ルーム設定の「旧ダイス演出を利用する」をオンにします。オフのときの 3D ダイスは、盤面と一緒に消えます。</li>
+      </ul>
+      <h2>うまく映らないとき</h2>
+      <ul>
+        <li><b>何も映らない</b> → ソースを読み込み直したあとに発言があったか、ログインしているかを確かめてください。CSS を消すとルームの画面が見えるはずです。</li>
+        <li><b>ルームに入る前の画面や、ログインの画面が映る</b> → 手順 5 でログインしてください。</li>
+        <li><b>立ち絵の上が切れる</b> → ブラウザソースの高さを上げるか、「立ち絵・ダイス」タブの「高さの上限」を下げてください。</li>
+      </ul>
+      <h2>PC に入れたフォントを使うとき</h2>
+      <ul>
+        <li>フォント欄で「名前で指定（PCのフォント）」を選び、フォント名を入れます。Chrome / Edge では「一覧から選ぶ」で、PC に入っているフォントを見た目で選べます（初回はフォントの使用の許可を聞かれます）。</li>
+        <li>OBS は自分の PC のフォントで表示するので、<b>OBS を動かす PC にも同じフォントを入れてください</b>。入っていないと、ふつうのゴシック体になります。</li>
+      </ul>
+      <h2>このツールについて</h2>
+      <p style="margin: 0">マシュマロでいただいた「メインの吹き出しも自由にデザインしたい」という声から作りました。ダイスの結果や秘匿チャットを映すなら、姉妹ツールの<a href="https://shiki365.github.io/chat-window-maker/">チャットウィンドウメーカー</a>もどうぞ。「こんなツールがほしい」「ここが使いにくい」といった声も、<a href="https://marshmallow-qa.com/jisg2c3imbza76d">マシュマロ</a>からお気軽にどうぞ。</p>
+    </div>
+  </div>
+</main>
+
+<input type="file" id="projectFile" accept=".json,application/json" hidden>
+
+<footer>
+  ブラウザだけで動く無料ツールです。作った CSS は自由に使えます。<br>
+  ココフォリアの画面の作りが変わると、表示が崩れることがあります。いずれのサービスとも関係のない<strong>非公式</strong>のツールです。<br>
+  <a href="https://shiki365.github.io/">ほかのツールも見る（shiki365 のツール置き場）</a> ・ <a href="https://shiki365.github.io/#contact">不具合の報告・感想</a> ・ <a href="https://marshmallow-qa.com/jisg2c3imbza76d">ほしいツールの要望（マシュマロ）</a> ・ <a href="https://sabunomisogi.booth.pm/items/8891048">開発を応援する（BOOTH）</a><br>
+  v1.0 ・ 最終更新 2026-09-25
+</footer>
+
+<script src="presets.v1.js?v=1"></script>
+<script src="model.v1.js?v=1"></script>
+<script src="css.v1.js?v=1"></script>
+<script src="mock.v1.js?v=1"></script>
+<script src="pcfonts.v1.js?v=1"></script>
+<script src="app.v1.js?v=1"></script>
+</body>
+</html>
