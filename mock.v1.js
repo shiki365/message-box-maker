@@ -108,11 +108,17 @@ img { user-select: none; }
   // ---------------------------------------------------------------- images
 
   const portraitCache = new Map();
-  // A standing figure, 240 x 480, transparent around it.
-  function portraitUrl(who) {
-    if (portraitCache.has(who)) return portraitCache.get(who);
+  // Sample portraits for the message box: shape "tall" (whole figure) or "square" (bust),
+  // or url: the user's own image, which every speaker then shows.
+  let sample = { shape: "tall", url: "" };
+
+  // A standing figure, 240 x 480, transparent around it. "square" frames its head and shoulders.
+  function portraitUrl(who, shape) {
+    const key = who + "|" + (shape || "tall");
+    if (portraitCache.has(key)) return portraitCache.get(key);
     const s = P.SPEAKERS[who] || P.SPEAKERS.hinata;
-    const url = dataUrl("<svg xmlns='http://www.w3.org/2000/svg' width='240' height='480' viewBox='0 0 240 480'>"
+    const frame = shape === "square" ? "width='240' height='240' viewBox='0 22 240 240'" : "width='240' height='480' viewBox='0 0 240 480'";
+    const url = dataUrl(`<svg xmlns='http://www.w3.org/2000/svg' ${frame}>`
       + `<path d='M58 118c0-52 28-84 62-84s62 32 62 84v96c-18 10-106 10-124 0z' fill='${s.hair}'/>`
       + `<rect x='106' y='150' width='28' height='30' fill='${s.skin}'/>`
       + `<path d='M60 196c10-18 34-26 60-26s50 8 60 26l14 150c-26 14-122 14-148 0z' fill='${s.cloth}'/>`
@@ -126,9 +132,11 @@ img { user-select: none; }
       + "<path d='M112 138q8 6 16 0' stroke='#b0686a' stroke-width='3' fill='none' stroke-linecap='round'/>"
       + `<path d='M78 108c4-38 26-54 42-54s38 16 42 54c-12-18-26-26-42-26s-30 8-42 26z' fill='${s.hair}'/>`
       + "</svg>");
-    portraitCache.set(who, url);
+    portraitCache.set(key, url);
     return url;
   }
+
+  const sampleImage = who => sample.url || portraitUrl(who, sample.shape);
 
   // Dice faces, drawn instead of CCFOLIA's /images/{faces}_dice/ PNGs.
   function dieUrl(faces, label, dark) {
@@ -232,7 +240,7 @@ img { user-select: none; }
     const result = msg.result && !msg.secret ? (msg.result.match(/＞[^＞]+$/) || [msg.result])[0] : "";
     const kind = !result ? "" : /成功|スペシャル/.test(msg.result) ? "success" : /失敗/.test(msg.result) ? "failure" : "neutral";
     return {
-      name: s.name, image: s.portrait === false ? null : portraitUrl(msg.who),
+      name: s.name, image: s.portrait === false ? null : sampleImage(msg.who),
       text: msg.secret ? "シークレットダイス" : msg.text, result, kind,
       dice: roll && !msg.secret ? diceImages(msg.dice) : [],
     };
@@ -251,6 +259,7 @@ img { user-select: none; }
     }
     const v = view(msg), el = m.el;
     m.shownId = msg.id;
+    m.shown = msg;
 
     // Portrait: rendered only when the message has one.
     let img = el.querySelector(":scope > img");
@@ -330,10 +339,17 @@ img { user-select: none; }
     m.el = null;
   }
 
-  // data: { css }
+  // data: { css, sample: { shape, url } }
   function update(doc, data) {
     const style = doc.getElementById("obs-custom");
     if (style.textContent !== data.css) style.textContent = data.css;
+    const next = data.sample || sample;
+    if (next.shape === sample.shape && (next.url || "") === sample.url) return;
+    sample = { shape: next.shape === "square" ? "square" : "tall", url: next.url || "" };
+    // Swap the portrait of the message on screen right away.
+    const m = mem(doc), img = m.el && m.el.querySelector(":scope > img");
+    const v = m.shown && view(m.shown);
+    if (img && v && v.image) img.setAttribute("src", v.image);
   }
 
   window.MboxMock = { documentHtml, update, send, close, reset, portraitUrl };

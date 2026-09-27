@@ -87,7 +87,7 @@
     box: { bg: "#161616", bgAlpha: 0.86, borderW: 0, borderColor: "#ffffff", borderAlpha: 0.2, radius: 6, shadow: 0.4,
       texture: "none", corners: false, cornerColor: "#ffffff", cornerAlpha: 0.8, padX: 24, padY: 12, lines: 3, buttons: "hover" },
     name: { show: true, style: "inline", font: "notosans", fontName: "", weight: 700, size: 15, color: "#f5f5f5",
-      plateBg: "#000000", plateAlpha: 0.8, plateRadius: 4, plateX: 16, plateBorderW: 0, plateBorderColor: "#ffffff", gap: 4 },
+      plateBg: "#000000", plateAlpha: 0.8, plateRadius: 4, plateX: 16, plateBorderW: 0, plateBorderColor: "#ffffff", plateLift: 0, plateGap: 0, gap: 4 },
     result: { show: true, place: "name", style: "text", font: "notosans", fontName: "", weight: 700, size: 15,
       success: "#5cc8ff", failure: "#ff5c7a", neutral: "#c8c8c8" },
     text: { font: "notosans", fontName: "", weight: 400, size: 17, color: "#f5f5f5", lineHeight: 1.6, spacing: 0.02,

@@ -165,7 +165,9 @@
 
   const isPlate = st => st.name.show && st.name.style === "plate";
   // How far the name plate sinks into the top of the box.
-  const plateSink = st => Math.round(st.name.size * 0.7);
+  // How far the plate reaches down into the box. Raising the plate (plateLift) can take it above the box.
+  const plateSink = st => Math.round(st.name.size * 0.7) - Math.round(st.name.plateLift || 0);
+  const minus = n => n >= 0 ? `- ${px(n)}` : `+ ${px(-n)}`;
   // The header row stays in the box only while it has something to show.
   const headInBox = st => !isPlate(st) && (st.name.show || st.result.show || st.box.buttons === "show");
 
@@ -250,7 +252,7 @@
     if (isPlate(st)) {
       w.add(SEL.head, {
         display: "flex", "align-items": "flex-end", position: "absolute", left: px(N.plateX), right: px(N.plateX),
-        bottom: `calc(100% - ${px(plateSink(st))})`, top: "auto", "min-height": "0", margin: "0", padding: "0",
+        bottom: `calc(100% ${minus(plateSink(st))})`, top: "auto", "min-height": "0", margin: "0", padding: "0",
         gap: "8px", background: "none", "z-index": "2",
       });
     } else if (headInBox(st)) {
@@ -336,11 +338,15 @@
 
   function textRules(st, w) {
     const T = st.text, B = st.box;
-    const top = isPlate(st) ? B.padY + plateSink(st) : headInBox(st) ? 0 : B.padY;
+    const N = st.name;
+    const top = isPlate(st) ? B.padY + Math.max(0, plateSink(st)) + Math.round(N.plateGap || 0) : headInBox(st) ? 0 : B.padY;
     w.comment(`本文（${B.lines}行ぶんの高さ。長い本文は、ココフォリアが打つたびに下へ送ります）`);
     w.add(SEL.content, {
       display: "block", height: px(B.lines * T.size * T.lineHeight), "box-sizing": "content-box", margin: "0",
       padding: `${px(top)} ${px(B.padX)} ${px(B.padY)}`, "overflow-y": "auto", "overflow-x": "hidden", "scrollbar-width": "none",
+      // The top padding scrolls along with the text, so a long message sent down line by line would climb
+      // into it and under the name plate. Clipping it keeps the text below the line where it starts.
+      "clip-path": top > 0 ? `inset(${px(top)} 0 0 0)` : undefined,
     });
     w.add(SEL.text, {
       "font-family": family(T.font, T.fontName), "font-size": px(T.size), "font-weight": weightOf(T.font, T.weight),

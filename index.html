@@ -242,6 +242,11 @@
             <div class="row" data-show="name.plateBorderW!=0"><label>枠線の色</label><input type="color" data-bind="name.plateBorderColor"></div>
             <div class="row"><label>左からの位置</label>
               <span class="with-value"><input type="range" data-bind="name.plateX" min="0" max="300" step="1"><output data-out="name.plateX" data-fmt="px"></output></span></div>
+            <div class="row"><label>札を上へ</label>
+              <span class="with-value"><input type="range" data-bind="name.plateLift" min="0" max="60" step="1"><output data-out="name.plateLift" data-fmt="px"></output></span></div>
+            <div class="row"><label>本文との間</label>
+              <span class="with-value"><input type="range" data-bind="name.plateGap" min="0" max="40" step="1"><output data-out="name.plateGap" data-fmt="px"></output></span></div>
+            <p class="desc">札は箱の上の縁に少し重ねて付きます。「札を上へ」で重なりを減らし、さらに上げると札と箱の間が空きます。「本文との間」は、札と本文の 1 行目のすき間です。</p>
           </div>
         </div>
         <p class="desc">メッセージボックスの名前には、キャラの色の情報がありません（チャット欄と違い、ココフォリアが色を付けていません）。そのため名前の色は 1 色です。「箱の上に札を付ける」では、ダイスの結果も札の横に並びます。</p>
@@ -382,6 +387,16 @@
 
     <div class="tester">
       <h2>発言して確かめる（プレビューだけ。書き出す CSS には影響しません）</h2>
+      <div class="btns" style="align-items: center;">
+        <span style="color: var(--muted); font-size: 12px;">見本の立ち絵</span>
+        <span class="seg" id="sampleSeg" aria-label="見本の立ち絵の形">
+          <button type="button" data-sample="tall">縦長（全身）</button>
+          <button type="button" data-sample="square">正方形（バストアップ）</button>
+        </span>
+        <button type="button" class="small" id="sampleOwn">自分の画像で試す</button>
+        <button type="button" class="small" id="sampleClear" hidden>自分の画像を外す</button>
+        <input type="file" id="sampleFile" accept="image/*" hidden>
+      </div>
       <div class="btns">
         <button type="button" class="small" data-send="chat">チャット</button>
         <button type="button" class="small" data-send="success">ダイス：成功</button>
@@ -480,14 +495,14 @@
   ブラウザだけで動く無料ツールです。作った CSS は自由に使えます。<br>
   ココフォリアの画面の作りが変わると、表示が崩れることがあります。いずれのサービスとも関係のない<strong>非公式</strong>のツールです。<br>
   <a href="https://shiki365.github.io/">ほかのツールも見る（shiki365 のツール置き場）</a> ・ <a href="https://shiki365.github.io/#contact">不具合の報告・感想</a> ・ <a href="https://marshmallow-qa.com/jisg2c3imbza76d">ほしいツールの要望（マシュマロ）</a> ・ <a href="https://sabunomisogi.booth.pm/items/8891048">開発を応援する（BOOTH）</a><br>
-  v1.1 ・ 最終更新 2026-09-25
+  v1.2 ・ 最終更新 2026-09-28
 </footer>
 
-<script src="presets.v1.js?v=1"></script>
-<script src="model.v1.js?v=1"></script>
-<script src="css.v1.js?v=1"></script>
-<script src="mock.v1.js?v=1"></script>
+<script src="presets.v1.js?v=2"></script>
+<script src="model.v1.js?v=2"></script>
+<script src="css.v1.js?v=2"></script>
+<script src="mock.v1.js?v=2"></script>
 <script src="pcfonts.v1.js?v=1"></script>
-<script src="app.v1.js?v=1"></script>
+<script src="app.v1.js?v=2"></script>
 </body>
 </html>

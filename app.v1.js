@@ -19,6 +19,9 @@
   const $$ = sel => [...document.querySelectorAll(sel)];
 
   const SAVE_KEY = "ccf-messagebox-maker.state";
+  // The user's own sample portrait: preview only, kept apart from the project (it can be large).
+  const SAMPLE_KEY = "ccf-messagebox-maker.sample-image";
+  let sampleImage = "";
   const TAB_KEY = "ccf-messagebox-maker.tab";
 
   let state = M.defaultState();
@@ -189,6 +192,8 @@
       else el.value = value;
     }
     for (const btn of $$("#bgSeg button")) btn.setAttribute("aria-pressed", String(btn.dataset.bg === state.preview.bg));
+    for (const btn of $$("#sampleSeg button")) btn.setAttribute("aria-pressed", String(!sampleImage && btn.dataset.sample === state.preview.sample));
+    $("#sampleClear").hidden = !sampleImage;
     $("#stage").className = "stage bg-" + state.preview.bg;
     updateVisibility();
     updateOutputs();
@@ -230,6 +235,16 @@
     });
   }
 
+  function setSampleImage(url) {
+    sampleImage = url;
+    try {
+      if (url) localStorage.setItem(SAMPLE_KEY, url); else localStorage.removeItem(SAMPLE_KEY);
+    } catch (err) { /* too large to keep: it still works until the page is closed */ }
+    syncControls();
+    renderNow();
+    scheduleSave();
+  }
+
   function currentCss() {
     return C.build(state, { url: M.roomUrl(state.source.room) });
   }
@@ -239,7 +254,7 @@
     $("#cssOut").value = css;
     applySize();
     if (!frameDoc) return;
-    K.update(frameDoc, { css: state.preview.raw ? "" : css });
+    K.update(frameDoc, { css: state.preview.raw ? "" : css, sample: { shape: state.preview.sample, url: sampleImage } });
   }
 
   function applySize() {
@@ -468,6 +483,26 @@
         scheduleSave();
       });
     }
+
+    try { sampleImage = localStorage.getItem(SAMPLE_KEY) || ""; } catch (err) { sampleImage = ""; }
+    for (const btn of $$("#sampleSeg button")) {
+      btn.addEventListener("click", () => {
+        state.preview.sample = btn.dataset.sample;
+        setSampleImage("");
+      });
+    }
+    $("#sampleOwn").addEventListener("click", () => $("#sampleFile").click());
+    $("#sampleFile").addEventListener("change", ev => {
+      const file = ev.target.files[0];
+      ev.target.value = "";
+      if (!file) return;
+      if (!/^image\//.test(file.type)) { status("画像ファイルを選んでください。", true); return; }
+      const reader = new FileReader();
+      reader.onload = () => { setSampleImage(reader.result); status(`見本の立ち絵を「${file.name}」にしました（プレビューだけ。書き出す CSS には影響しません）。`); };
+      reader.onerror = () => status("画像を読み込めませんでした。", true);
+      reader.readAsDataURL(file);
+    });
+    $("#sampleClear").addEventListener("click", () => setSampleImage(""));
     for (const btn of $$("[data-size]")) {
       btn.addEventListener("click", () => {
         const [w, h] = btn.dataset.size.split("x").map(Number);

@@ -38,7 +38,7 @@
       version: 1,
       design: "standard",
       source: { room: "", w: 1280, h: 720 },
-      preview: { bg: "scene", raw: false },
+      preview: { bg: "scene", raw: false, sample: "tall" },
       fileBase: "messagebox",
     };
     applyDesign(state, "standard");
