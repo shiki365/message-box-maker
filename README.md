@@ -6,7 +6,7 @@
 
 手元で使う場合も、`index.html` をブラウザで開けば動く（サーバー不要・インストール不要）。
 
-マシュマロでいただいた「メインの吹き出しも自由にデザイン・制作できるツールがほしい」という要望から作った。ダイスの結果や秘匿チャットを映すなら、姉妹ツールの [チャットウィンドウメーカー](https://shiki365.github.io/chat-window-maker/) を使う。ほしいツールの要望や感想は [マシュマロ](https://marshmallow-qa.com/jisg2c3imbza76d) へ。
+マシュマロでいただいた「メインの吹き出しも自由にデザイン・制作できるツールがほしい」という要望から作った。ダイスの結果や秘匿チャットを映すなら、姉妹ツールの [チャットウィンドウメーカー](https://shiki365.github.io/chat-window-maker/) を使う。GM が 1 人で送っても台詞ごとに立ち絵を出したいなら、[シナリオテキストメーカー](https://shiki365.github.io/scenario-text-maker/) を使う。ほしいツールの要望や感想は [マシュマロ](https://marshmallow-qa.com/jisg2c3imbza76d) へ。
 
 ## できること
 
