@@ -12,11 +12,15 @@
  *   - 1.2s after the last character the queue moves on; the last message stays on screen
  *   - "close" moves the queue on and slides the box out; MUI then sets visibility: hidden inline
  *   - a new message opens it again
+ *
+ * Its texts follow the page's language (i18n.v1.js), as CCFOLIA itself shows English and Korean:
+ * room labels, sample names and lines, and the dice results. Colors are decided on the Japanese result.
  */
 (function () {
   "use strict";
 
   const P = window.MboxPresets;
+  const t = text => (window.I18n ? window.I18n.t(text) : text);
   const FONT = '"Roboto", "Helvetica", "Arial", sans-serif';
   const SHADOW6 = "0px 3px 5px -1px rgba(0,0,0,0.2), 0px 6px 10px 0px rgba(0,0,0,0.14), 0px 1px 18px 0px rgba(0,0,0,0.12)";
   // MUI dark mode lightens a Paper by its elevation: 11% white for elevation 6.
@@ -168,18 +172,19 @@ img { user-select: none; }
   function documentHtml() {
     const pieces = [["hinata", 24, 30], ["ren", 44, 34], ["shizuku", 62, 28]]
       .map(([who, x, y]) => `<div class='ccf-piece' style='left: ${x}%; top: ${y}%; background-image: url("${portraitUrl(who)}")'></div>`).join("");
-    return "<!doctype html><html lang='ja'><head><meta charset='utf-8'>"
+    const lang = window.I18n ? window.I18n.lang : "ja";
+    return `<!doctype html><html lang='${lang}'><head><meta charset='utf-8'>`
       + `<style id="ccf-base">${BASE_CSS}</style><style id="obs-custom"></style></head>`
       + "<body><div id='root'><div class='ccf-room'>"
       + "<div class='ccf-screen' id='ccf-screen'>"
       + `<div class='ccf-field'></div>${pieces}`
-      + "<div class='ccf-appbar'>洋館の一夜 <span class='ccf-grow'></span><i></i><i></i><i></i><i></i><i></i></div>"
-      + "<div class='ccf-status'><div>朝霧 ひなた　HP 11/11　SAN 55</div><div>黒崎 蓮　HP 12/12　SAN 60</div></div>"
+      + `<div class='ccf-appbar'>${esc(t("洋館の一夜"))} <span class='ccf-grow'></span><i></i><i></i><i></i><i></i><i></i></div>`
+      + `<div class='ccf-status'><div>${esc(t(P.SPEAKERS.hinata.name))}　HP 11/11　SAN 55</div><div>${esc(t(P.SPEAKERS.ren.name))}　HP 12/12　SAN 60</div></div>`
       + "<div class='ccf-zoom'><b></b><b></b><b></b></div><div class='ccf-fab'></div>"
       + "</div>"
-      + "<div class='ccf-drawer'><header>ルームチャット</header>"
-      + "<div class='ccf-log'><p><b>KP</b>門をくぐると、雨に濡れた洋館が目の前に建っている。</p><p><b>朝霧 ひなた</b>ここが噂の洋館……。</p></div>"
-      + "<div class='ccf-form'>メッセージを入力</div></div>"
+      + `<div class='ccf-drawer'><header>${esc(t("ルームチャット"))}</header>`
+      + `<div class='ccf-log'><p><b>KP</b>${esc(t("門をくぐると、雨に濡れた洋館が目の前に建っている。"))}</p><p><b>${esc(t(P.SPEAKERS.hinata.name))}</b>${esc(t("ここが噂の洋館……。"))}</p></div>`
+      + `<div class='ccf-form'>${esc(t("メッセージを入力"))}</div></div>`
       + "</div></div></body></html>";
   }
 
@@ -194,8 +199,8 @@ img { user-select: none; }
   }
 
   function boxHtml() {
-    const button = (label, d) => `<button class='MuiButtonBase-root MuiIconButton-root MuiIconButton-edgeEnd MuiIconButton-sizeLarge' tabindex='-1' type='button' aria-label='${label}'>${svg(d)}</button>`;
-    return "<div class='MuiPaper-root MuiPaper-elevation MuiPaper-rounded MuiPaper-elevation6 ccf-mb' role='status' aria-live='polite' aria-atomic='true' aria-label='メッセージ'>"
+    const button = (label, d) => `<button class='MuiButtonBase-root MuiIconButton-root MuiIconButton-edgeEnd MuiIconButton-sizeLarge' tabindex='-1' type='button' aria-label='${esc(t(label))}'>${svg(d)}</button>`;
+    return "<div class='MuiPaper-root MuiPaper-elevation MuiPaper-rounded MuiPaper-elevation6 ccf-mb' role='status' aria-live='polite' aria-atomic='true' aria-label='" + esc(t("メッセージ")) + "'>"
       + "<div class='MuiPaper-root MuiPaper-elevation MuiPaper-rounded MuiPaper-elevation6 ccf-mb-box'>"
       + "<div class='ccf-mb-dice'></div>"
       + "<div class='MuiToolbar-root MuiToolbar-gutters MuiToolbar-dense ccf-mb-head'>"
@@ -234,14 +239,17 @@ img { user-select: none; }
   }
 
   // What CCFOLIA derives from a message: the text, "🎲 ＞ 成功" and its color.
+  // The color comes from the result as written (a typed English or Korean result works too);
+  // the texts shown are then put into the page's language.
   function view(msg) {
     const s = P.SPEAKERS[msg.who] || P.SPEAKERS.hinata;
     const roll = !!msg.result || !!msg.secret;
     const result = msg.result && !msg.secret ? (msg.result.match(/＞[^＞]+$/) || [msg.result])[0] : "";
-    const kind = !result ? "" : /成功|スペシャル/.test(msg.result) ? "success" : /失敗/.test(msg.result) ? "failure" : "neutral";
+    const kind = !result ? "" : /成功|スペシャル|success|special|성공|스페셜/i.test(msg.result) ? "success"
+      : /失敗|fail|실패/i.test(msg.result) ? "failure" : "neutral";
     return {
-      name: s.name, image: s.portrait === false ? null : sampleImage(msg.who),
-      text: msg.secret ? "シークレットダイス" : msg.text, result, kind,
+      name: t(s.name), image: s.portrait === false ? null : sampleImage(msg.who),
+      text: msg.secret ? t("シークレットダイス") : t(msg.text), result: t(result), kind,
       dice: roll && !msg.secret ? diceImages(msg.dice) : [],
     };
   }

@@ -24,9 +24,15 @@
  *
  * Everything else on the room screen is hidden with visibility, which children can switch back on:
  * body is hidden and only the message box is visible again. No need to know the board's DOM.
+ * The selectors use roles and MUI classes, never CCFOLIA's texts, so they work in every language it shows.
+ *
+ * The comments in the CSS follow the page's language (i18n.v1.js): Japanese text, through t().
  */
 (function () {
   "use strict";
+
+  const t = (text, vars) => (window.I18n ? window.I18n.t(text, vars)
+    : vars ? text.replace(/\{(\w+)\}/g, (all, name) => (name in vars ? String(vars[name]) : all)) : text);
 
   const P = window.MboxPresets, R = P.RESULT_CLASS;
 
@@ -99,7 +105,7 @@
   function pcFontNote(uses) {
     const names = [...new Set(uses.filter(([key]) => key === "pc").map(([, , name]) => pcName(name)).filter(Boolean))];
     if (!names.length) return [];
-    return ["   ■ PC のフォント（OBS を動かす PC にも入れてください）", `       ${safeComment(names.join(" / "))}`];
+    return [t("   ■ PC のフォント（OBS を動かす PC にも入れてください）"), `       ${safeComment(names.join(" / "))}`];
   }
 
   function fontImports(uses) {
@@ -174,7 +180,7 @@
   // ---------------------------------------------------------------- parts
 
   function pageRules(w) {
-    w.comment("ルームの画面を消して、メッセージボックスだけ残す");
+    w.comment(t("ルームの画面を消して、メッセージボックスだけ残す"));
     w.add("html, body, #root", { background: "transparent", "background-color": "transparent", "background-image": "none" });
     w.add("html, body", { overflow: "hidden" });
     // visibility, not display: the children can turn it back on, so the box stays and the board goes.
@@ -186,7 +192,7 @@
   function layoutRules(st, w) {
     const L = st.layout;
     const margin = { center: "0 auto", left: "0 auto 0 0", right: "0 0 0 auto" }[L.align] || "0 auto";
-    w.comment("メッセージボックスの位置と幅");
+    w.comment(t("メッセージボックスの位置と幅"));
     // position: fixed puts it against the browser source, whatever the width of the chat drawer.
     w.add(SEL.root, {
       position: "fixed", left: px(L.side), right: px(L.side), bottom: px(L.bottom), top: "auto",
@@ -219,7 +225,7 @@
       sizes.push("100% 100%");
       color = "transparent";
     }
-    w.comment("箱");
+    w.comment(t("箱"));
     w.add(SEL.box, {
       position: "relative", "z-index": "1", margin: "0", padding: "0", "box-sizing": "border-box", overflow: "visible",
       "background-color": color, "background-image": images.length ? images.join(", ") : "none",
@@ -248,7 +254,7 @@
   function headRules(st, w) {
     const B = st.box, N = st.name, RS = st.result;
     const right = RS.place === "right";
-    w.comment(isPlate(st) ? "見出しの行（名前の札とダイスの結果を、箱の上に出す）" : "見出しの行（名前とダイスの結果）");
+    w.comment(t(isPlate(st) ? "見出しの行（名前の札とダイスの結果を、箱の上に出す）" : "見出しの行（名前とダイスの結果）"));
     if (isPlate(st)) {
       w.add(SEL.head, {
         display: "flex", "align-items": "flex-end", position: "absolute", left: px(N.plateX), right: px(N.plateX),
@@ -277,14 +283,14 @@
       return;
     }
     // Only while the mouse is over the page, which happens only in OBS's "Interact" window.
-    w.comment("OBS の「対話」でマウスを乗せたときだけ、スキップ・閉じるのボタンを出す");
+    w.comment(t("OBS の「対話」でマウスを乗せたときだけ、スキップ・閉じるのボタンを出す"));
     w.add(`html:not(:hover) ${SEL.buttons}`, { display: "none" });
     w.add(`html:hover ${SEL.buttons}`, Object.assign({}, button, { background: "rgba(0, 0, 0, 0.7)", color: "#ffffff" }));
   }
 
   function nameRules(st, w) {
     const N = st.name, T = st.text;
-    w.comment("名前");
+    w.comment(t("名前"));
     if (!N.show) {
       w.add(SEL.name, { display: "none" });
       return;
@@ -308,7 +314,7 @@
 
   function resultRules(st, w) {
     const RS = st.result, N = st.name, T = st.text, plate = isPlate(st);
-    w.comment("ダイスの結果（成功・失敗・その他）");
+    w.comment(t("ダイスの結果（成功・失敗・その他）"));
     if (!RS.show) {
       w.add(SEL.result, { display: "none" });
       return;
@@ -340,7 +346,7 @@
     const T = st.text, B = st.box;
     const N = st.name;
     const top = isPlate(st) ? B.padY + Math.max(0, plateSink(st)) + Math.round(N.plateGap || 0) : headInBox(st) ? 0 : B.padY;
-    w.comment(`本文（${B.lines}行ぶんの高さ。長い本文は、ココフォリアが打つたびに下へ送ります）`);
+    w.comment(t("本文（{n}行ぶんの高さ。長い本文は、ココフォリアが打つたびに下へ送ります）", { n: B.lines }));
     w.add(SEL.content, {
       display: "block", height: px(B.lines * T.size * T.lineHeight), "box-sizing": "content-box", margin: "0",
       padding: `${px(top)} ${px(B.padX)} ${px(B.padY)}`, "overflow-y": "auto", "overflow-x": "hidden", "scrollbar-width": "none",
@@ -357,7 +363,7 @@
 
   function portraitRules(st, w) {
     const PT = st.portrait;
-    w.comment("立ち絵");
+    w.comment(t("立ち絵"));
     if (!PT.show) {
       w.add(SEL.portrait, { display: "none" });
       return;
@@ -375,7 +381,7 @@
 
   function diceRules(st, w) {
     const D = st.dice, PT = st.portrait;
-    w.comment("ダイスの画像");
+    w.comment(t("ダイスの画像"));
     if (!D.show) {
       w.add(SEL.dice, { display: "none" });
       return;
@@ -403,18 +409,18 @@
 
     w.raw([
       "/* ==========================================================================",
-      "   ココフォリア → OBS  メッセージボックス",
-      `   メッセージボックスメーカーで作成${design ? `（ひな形: ${safeComment(design.label)}）` : ""}`,
+      t("   ココフォリア → OBS  メッセージボックス"),
+      t("   メッセージボックスメーカーで作成") + (design ? t("（ひな形: {label}）", { label: safeComment(t(design.label)) }) : ""),
       "   --------------------------------------------------------------------------",
-      "   ■ ブラウザソースのURL（ルームの URL そのまま。末尾に /chat は付けません）",
-      `       ${safeComment(opts.url || "https://ccfolia.com/rooms/{ルームID}")}`,
-      `   ■ ブラウザソースの大きさ  幅 ${st.source.w} / 高さ ${st.source.h}`,
-      "   ■ ルームの画面は消えて、メッセージボックスだけが映ります。",
-      "       出るのは、ソースを読み込んだあとの発言だけです。最後の発言は、閉じるまで残ります。",
-      ...(st.box.buttons === "hover" ? ["       閉じるときは、ソースを右クリック →「対話」でボックスにマウスを乗せ、×を押してください。"] : []),
-      ...(st.dice.show ? ["   ■ ダイスの画像は、ルーム設定の「旧ダイス演出を利用する」がオンのときだけ出ます。"] : []),
-      "   ■ 音（BGM・ダイスの音）が二重に入るときは、ソースの「OBS で音声を制御」をオンにして、",
-      "       音声ミキサーでこのソースをミュートしてください。",
+      t("   ■ ブラウザソースのURL（ルームの URL そのまま。末尾に /chat は付けません）"),
+      `       ${safeComment(opts.url || t("https://ccfolia.com/rooms/{ルームID}"))}`,
+      t("   ■ ブラウザソースの大きさ  幅 {w} / 高さ {h}", { w: st.source.w, h: st.source.h }),
+      t("   ■ ルームの画面は消えて、メッセージボックスだけが映ります。"),
+      t("       出るのは、ソースを読み込んだあとの発言だけです。最後の発言は、閉じるまで残ります。"),
+      ...(st.box.buttons === "hover" ? [t("       閉じるときは、ソースを右クリック →「対話」でボックスにマウスを乗せ、×を押してください。")] : []),
+      ...(st.dice.show ? [t("   ■ ダイスの画像は、ルーム設定の「旧ダイス演出を利用する」がオンのときだけ出ます。")] : []),
+      t("   ■ 音（BGM・ダイスの音）が二重に入るときは、ソースの「OBS で音声を制御」をオンにして、"),
+      t("       音声ミキサーでこのソースをミュートしてください。"),
       ...pcFontNote(uses),
       "   ========================================================================== */",
     ].join("\n"));

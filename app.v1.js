@@ -10,9 +10,15 @@
  *   data-show="a=x|y&b!=z"        visible only while the condition holds
  *   data-options="FONTS"          select filled from MboxPresets
  *   data-nohistory                changes don't create an undo step
+ *
+ * Texts are written in Japanese and go through t() (i18n.v1.js), which puts them into the page's
+ * language; the Japanese text is the dictionary key. Static HTML is translated by i18n.v1.js itself.
  */
 (function () {
   "use strict";
+
+  const t = (text, vars) => (window.I18n ? window.I18n.t(text, vars)
+    : vars ? text.replace(/\{(\w+)\}/g, (all, name) => (name in vars ? String(vars[name]) : all)) : text);
 
   const P = window.MboxPresets, M = window.MboxModel, C = window.MboxCss, K = window.MboxMock;
   const $ = sel => document.querySelector(sel);
@@ -63,12 +69,11 @@
   };
 
   function sentStatus(kind) {
-    const label = KIND_LABEL[kind] || "メッセージ";
     const notes = [];
-    if (kind === "long") notes.push("KP は立ち絵なしのキャラです。本文の高さを超えた分は、ココフォリアが打つたびに下へ送ります");
-    if (kind === "secret") notes.push("ココフォリアと同じく、本文は「シークレットダイス」になり、ダイスの画像と結果は出ません");
-    notes.push("前の発言を打ち終わってから 1.2 秒後に出ます");
-    status(`${label}を送りました。${notes.join("。")}。`);
+    if (kind === "long") notes.push(t("KP は立ち絵なしのキャラです。本文の高さを超えた分は、ココフォリアが打つたびに下へ送ります。"));
+    if (kind === "secret") notes.push(t("ココフォリアと同じく、本文は「シークレットダイス」になり、ダイスの画像と結果は出ません。"));
+    notes.push(t("前の発言を打ち終わってから 1.2 秒後に出ます。"));
+    status(t("{label}を送りました。", { label: t(KIND_LABEL[kind] || "メッセージ") }) + notes.join(""));
   }
 
   function send(kind) {
@@ -82,14 +87,14 @@
 
   function sendCustom() {
     const text = $("#customText").value.trim();
-    if (!text) { status("送る文を入れてください。", true); return; }
+    if (!text) { status(t("送る文を入れてください。"), true); return; }
     const kind = $("#customKind").value;
     const [body, result] = text.split("|").map(s => s.trim());
-    if (kind === "dice" && !result) { status("ダイスの結果は「|」の後ろに書きます（例: CC<=50 | (1D100<=50) ＞ 23 ＞ 成功）。", true); return; }
+    if (kind === "dice" && !result) { status(t("ダイスの結果は「|」の後ろに書きます（例: CC<=50 | (1D100<=50) ＞ 23 ＞ 成功）。"), true); return; }
     const value = kind === "dice" ? Number((result.match(/＞\s*(\d+)/) || [])[1]) || 50 : 0;
     K.send(frameDoc, { who: $("#customWho").value, text: body, result: kind === "dice" ? result : undefined, dice: kind === "dice" ? [[100, value]] : [] });
     $("#customText").value = "";
-    status("送りました。前の発言を打ち終わってから 1.2 秒後に出ます。");
+    status(t("送りました。前の発言を打ち終わってから 1.2 秒後に出ます。"));
   }
 
   // ---------------------------------------------------------------- controls
@@ -149,7 +154,7 @@
       case "pct": return Math.round(value * 100) + "%";
       case "px": return r + "px";
       case "em": return r.toFixed(2);
-      case "lines": return value + "行";
+      case "lines": return t("{n}行", { n: value });
       default: return String(r);
     }
   }
@@ -204,7 +209,7 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   function optionsHtml(list) {
-    return list.map(([value, text]) => `<option value="${esc(value)}">${esc(text)}</option>`).join("");
+    return list.map(([value, text]) => `<option value="${esc(value)}">${esc(t(text))}</option>`).join("");
   }
 
   function updateRoomUrl() {
@@ -219,7 +224,7 @@
   function copyRoomUrl() {
     const url = M.roomUrl(state.source.room);
     if (!url) return;
-    copyText(url).then(ok => status(ok ? "URL をコピーしました。OBS のブラウザソースの URL に貼り付けてください。" : "コピーできませんでした。", !ok));
+    copyText(url).then(ok => status(t(ok ? "URL をコピーしました。OBS のブラウザソースの URL に貼り付けてください。" : "コピーできませんでした。"), !ok));
   }
 
   // ---------------------------------------------------------------- preview
@@ -268,8 +273,9 @@
     frame.style.transform = `scale(${k})`;
     $("#frameBox").style.width = Math.round(w * k) + "px";
     $("#frameBox").style.height = Math.round(h * k) + "px";
-    $("#stageInfo").textContent = `表示 ${Math.round(k * 100)}%　ピンクの点線 = ブラウザソースの範囲${state.preview.raw ? "　（CSS を当てる前のルーム画面）" : ""}`;
-    $("#sizeNote").innerHTML = `ブラウザソースの大きさ　幅 <b>${w}</b> × 高さ <b>${h}</b>`;
+    $("#stageInfo").textContent = t("表示 {pct}%　ピンクの点線 = ブラウザソースの範囲", { pct: Math.round(k * 100) })
+      + (state.preview.raw ? t("　（CSS を当てる前のルーム画面）") : "");
+    $("#sizeNote").innerHTML = t("ブラウザソースの大きさ　幅 <b>{w}</b> × 高さ <b>{h}</b>", { w, h });
   }
 
   function setupFrame() {
@@ -304,9 +310,9 @@
 
   function copyCss() {
     copyText(currentCss()).then(ok => {
-      if (!ok) { status("コピーできませんでした。下の「書き出す CSS を見る」から選んでコピーしてください。", true); return; }
-      const urlNote = M.roomUrl(state.source.room) ? "" : "ブラウザソースの URL は、ルームの URL（末尾に /chat を付けない）にしてください。";
-      status(`CSS をコピーしました。OBS のブラウザソース（幅 ${state.source.w} × 高さ ${state.source.h}）のカスタム CSS に貼り付けてください。${urlNote}`);
+      if (!ok) { status(t("コピーできませんでした。下の「書き出す CSS を見る」から選んでコピーしてください。"), true); return; }
+      const urlNote = M.roomUrl(state.source.room) ? "" : t("ブラウザソースの URL は、ルームの URL（末尾に /chat を付けない）にしてください。");
+      status(t("CSS をコピーしました。OBS のブラウザソース（幅 {w} × 高さ {h}）のカスタム CSS に貼り付けてください。", { w: state.source.w, h: state.source.h }) + urlNote);
     });
   }
 
@@ -328,7 +334,7 @@
   function downloadCss() {
     const name = `${baseName()}.css`;
     download(new Blob([currentCss()], { type: "text/css" }), name);
-    status(`${name} を保存しました。`);
+    status(t("{name} を保存しました。", { name }));
   }
 
   // ---------------------------------------------------------------- history & saving
@@ -402,17 +408,17 @@
   function saveProject() {
     const data = { app: "ccf-messagebox-maker", version: 1, state };
     download(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }), baseName() + ".messagebox.json");
-    status("プロジェクトを保存しました。");
+    status(t("プロジェクトを保存しました。"));
   }
 
   async function openProjectFile(file) {
     try {
       const data = JSON.parse(await file.text());
-      if (!data || data.app !== "ccf-messagebox-maker" || !data.state) throw new Error("このツールのプロジェクトファイルではありません。");
+      if (!data || data.app !== "ccf-messagebox-maker" || !data.state) throw new Error(t("このツールのプロジェクトファイルではありません。"));
       loadState(M.normalize(data.state));
-      status(`「${file.name}」を開きました。`);
+      status(t("「{file}」を開きました。", { file: file.name }));
     } catch (err) {
-      status(err instanceof SyntaxError ? "ファイルを読み取れませんでした。" : err.message, true);
+      status(err instanceof SyntaxError ? t("ファイルを読み取れませんでした。") : err.message, true);
     }
   }
 
@@ -433,7 +439,7 @@
 
   function showDesignDesc() {
     const d = P.DESIGNS[$("#design").value];
-    $("#designDesc").textContent = d ? d.desc + "（箱・文字・立ち絵の設定がまとめて置き換わります。ブラウザソースの大きさとルームはそのまま）" : "";
+    $("#designDesc").textContent = d ? t(d.desc) + t("（箱・文字・立ち絵の設定がまとめて置き換わります。ブラウザソースの大きさとルームはそのまま）") : "";
   }
 
   function buildStaticUI() {
@@ -443,7 +449,7 @@
       const list = Array.isArray(source) ? source : Object.entries(source).map(([key, v]) => [key, v.label]);
       select.innerHTML = optionsHtml(list);
     }
-    $("#customWho").innerHTML = optionsHtml(Object.entries(P.SPEAKERS).map(([key, s]) => [key, s.name + (s.portrait === false ? "（立ち絵なし）" : "")]));
+    $("#customWho").innerHTML = optionsHtml(Object.entries(P.SPEAKERS).map(([key, s]) => [key, t(s.name) + (s.portrait === false ? t("（立ち絵なし）") : "")]));
     bindControls(document);
   }
 
@@ -465,7 +471,7 @@
       M.applyDesign(state, key);
       commit();
       syncAll();
-      status(`「${P.DESIGNS[key].label}」を適用しました。`);
+      status(t("「{label}」を適用しました。", { label: t(P.DESIGNS[key].label) }));
     });
     $("#undo").addEventListener("click", undo);
     $("#redo").addEventListener("click", redo);
@@ -496,10 +502,10 @@
       const file = ev.target.files[0];
       ev.target.value = "";
       if (!file) return;
-      if (!/^image\//.test(file.type)) { status("画像ファイルを選んでください。", true); return; }
+      if (!/^image\//.test(file.type)) { status(t("画像ファイルを選んでください。"), true); return; }
       const reader = new FileReader();
-      reader.onload = () => { setSampleImage(reader.result); status(`見本の立ち絵を「${file.name}」にしました（プレビューだけ。書き出す CSS には影響しません）。`); };
-      reader.onerror = () => status("画像を読み込めませんでした。", true);
+      reader.onload = () => { setSampleImage(reader.result); status(t("見本の立ち絵を「{file}」にしました（プレビューだけ。書き出す CSS には影響しません）。", { file: file.name })); };
+      reader.onerror = () => status(t("画像を読み込めませんでした。"), true);
       reader.readAsDataURL(file);
     });
     $("#sampleClear").addEventListener("click", () => setSampleImage(""));
@@ -519,13 +525,13 @@
     $("#closeBox").addEventListener("click", () => {
       if (!frameDoc) return;
       K.close(frameDoc);
-      status("閉じました。ココフォリアで「閉じる」を押したときと同じく、次の発言でまた出ます。");
+      status(t("閉じました。ココフォリアで「閉じる」を押したときと同じく、次の発言でまた出ます。"));
     });
     $("#resetMessages").addEventListener("click", () => {
       if (!frameDoc) return;
       K.reset(frameDoc);
       K.send(frameDoc, P.FIRST_MESSAGE);
-      status("プレビューのメッセージを最初の状態に戻しました。");
+      status(t("プレビューのメッセージを最初の状態に戻しました。"));
     });
 
     $("#copyCss").addEventListener("click", copyCss);
@@ -543,9 +549,9 @@
     $("#openProject").addEventListener("click", () => { $("#projectFile").value = ""; $("#projectFile").click(); });
     $("#projectFile").addEventListener("change", ev => { if (ev.target.files[0]) openProjectFile(ev.target.files[0]); });
     $("#resetAll").addEventListener("click", () => {
-      if (!confirm("いまの作業内容を消して、最初の状態に戻します。よろしいですか？")) return;
+      if (!confirm(t("いまの作業内容を消して、最初の状態に戻します。よろしいですか？"))) return;
       loadState(M.defaultState());
-      status("最初の状態に戻しました。");
+      status(t("最初の状態に戻しました。"));
     });
   }
 
@@ -557,7 +563,7 @@
     switchTab($$("[data-tab]").some(b => b.dataset.tab === tab) ? tab : "box");
     loadState(loadSaved() || M.defaultState());
     setupFrame();
-    status("準備ができました。左で形や色を選ぶと、右のプレビューにすぐ反映されます。");
+    status(t("準備ができました。左で形や色を選ぶと、右のプレビューにすぐ反映されます。"));
   }
 
   init();
